@@ -265,6 +265,8 @@ int main(int, char** argv)
             ImGui::SetCursorPosX(30);
             ImGui::MenuItem("Включить Синхронизацию кадров", NULL, &ND.fBvsync, 1);
             ImGui::SetCursorPosX(30);
+            ImGui::Text(("Экран:" + std::to_string(dx) + ":" + std::to_string(dy)).c_str());
+            ImGui::SetCursorPosX(30);
             if (ImGui::Button("ОК")) {
                 ND.MakeConfig = false;
             }
@@ -301,7 +303,7 @@ int main(int, char** argv)
             }
             ImGui::SetCursorPosX(30);
             if (ND.FileNameOffset.size() < 1) {
-                ImGui::Text("Ошибка введите имя или путь к файлу!!");
+                ImGui::Text("Ошибка введите имя или выберите файл!!");
             }
             ImGui::End();
         }
