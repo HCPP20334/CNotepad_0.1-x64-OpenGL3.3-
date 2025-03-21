@@ -1,6 +1,6 @@
 
 
-
+#define CRT_NO_WARNINGS 1
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
@@ -23,6 +23,7 @@
 #include "dSys.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <wtypes.h>
 #include <commdlg.h>
 bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height, unsigned char* imgBuffer) {
     int image_width = 0;
@@ -55,6 +56,8 @@ bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_wid
 
     return true;
 }//
+uint64_t dx = 0;
+uint64_t dy = 0;
 class CImage {
 public:
     int fCImageCtx = 0;
@@ -64,7 +67,23 @@ public:
     bool CImageOpenSt;
     uint8_t CImageBuffer;
     uint64_t InitCImage(std::string png_file);
+    uint64_t displaySizeA(uint64_t* wx, uint64_t* hy);
 };
+uint64_t CImage::displaySizeA(uint64_t *wx, uint64_t *hy)
+{
+    RECT desktop;
+    // Get a handle to the desktop window
+    const HWND hDesktop = GetDesktopWindow();
+    // Get the size of screen to the variable desktop
+    GetWindowRect(hDesktop, &desktop);
+    // The top left corner will have coordinates (0,0)
+    // and the bottom right corner will have coordinates
+    // (horizontal, vertical)
+    *wx = desktop.right;
+    *hy = desktop.bottom;
+    return 1;
+}
+
 bool CImage::CreateImage(int64_t w,int64_t h) {
     ImGui::Image((void*)(intptr_t)CImage::fCImageGL, ImVec2(w, h));
     return true;
@@ -91,7 +110,9 @@ void openFileDialog(std::string& fileName) {
     fileName = std::string((char*)ofn.lpstrFile);
 }
 int64_t fileCounts = 0;
+static bool cbRuntimeBatch;
 CImage CImageC;
+std::string fC_commandStr;
 class CNotepad {
     public:
         bool fCNotepadWindow = true;
@@ -125,9 +146,16 @@ class CNotepad {
         int64_t fp_lineCount = 0;
         int64_t cLine = 0;
         bool fNBufferLine = true;
-        bool fBvsync = false;
+        bool fBvsync = true;
         bool ConfigEdit(std::string sCfgItem);
         bool ConfigParse(std::string sCfgItem, bool* b_enable, bool b_st);
+        uint64_t CSetTextColor(const ImVec4& col);
+        uint64_t CSetColorAssept();
+        bool StartCompile(std::string command);
+        uint64_t SwapBuffer(std::string* buf0);
+        std::string commandCompiler;
+        bool BatchRT(std::string TextBuffer);
+        uint64_t dsx(int64_t* x, int64_t* y, HWND hwnd);
 };
 bool CNotepad::NButton(const char* text, bool* state) {
     if (ImGui::Button(text)) {
@@ -140,6 +168,14 @@ bool CNotepad::NButton(const char* text, bool* state) {
     }
 
 }
+bool CNotepad::BatchRT(std::string TextBuffer) {
+    std::system((TextBuffer).c_str());
+}
+uint64_t CNotepad::SwapBuffer(std::string* buf0) {
+    *buf0 = commandCompiler;
+    return commandCompiler.size();
+}
+
 bool CNotepad::SaveFile(std::string fileName, std::string text) {
     std::ofstream fileHandle((fileName).c_str());
     CNotepad::fileIsOpen = fileHandle.is_open();
@@ -180,6 +216,27 @@ bool CNotepad::OpenFileN(std::string* outdata) {
     fileRead.close();
     return fileRead.is_open();
 }
+uint64_t CNotepad::dsx(int64_t* x, int64_t* y,HWND hwnd) {
+
+    RECT desktop;
+    const HWND hDesktop = hwnd;
+    GetWindowRect(hDesktop, &desktop);
+    *x = desktop.right;
+    *y = desktop.bottom;
+    return 1;
+}
+uint64_t CNotepad::CSetTextColor(const ImVec4& col) {
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    return 1;
+}
+uint64_t CNotepad::CSetColorAssept() {
+    ImGui::PopStyleColor();
+    return 1;
+}
+bool CNotepad::StartCompile(std::string command) {
+    std::system((command+" "+ FileNameOffset).c_str());
+    return 0;
+}
 bool CNotepad::OpenFileA(std::string* outdata) {
     *outdata = "";
     std::ifstream fileRead2((CNotepad::FileNameOffset).c_str());
@@ -191,11 +248,7 @@ bool CNotepad::OpenFileA(std::string* outdata) {
             CNotepad::fp_lineCount = 0;
         }
         if (CNotepad::fNBufferLine) {
-            if (fp_lineCount == 5) {
-                CNotepad::cLine++;
-                std::cout << CNotepad::cLine << std::endl;
-                CNotepad::fCsrText = CNotepad::fCsrText + "\n";
-            }
+            
         }
         *outdata += CNotepad::fCsrText;
     }
