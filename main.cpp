@@ -44,7 +44,7 @@ int main(int, char** argv)
     WNDCLASSEXW wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"CNotepad OpenGL3.3", nullptr };
     ::RegisterClassExW(&wc);
     HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"CNotepad OpenGL3.3", WS_OVERLAPPEDWINDOW | WS_EX_TOOLWINDOW | WS_EX_NOPARENTNOTIFY, 100, 80, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
-    ::SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SIZEBOX);
+   // ::SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SIZEBOX);
     // Initialize OpenGL
     if (!CreateDeviceWGL(hwnd, &g_MainWindow))
     {
@@ -206,27 +206,23 @@ int main(int, char** argv)
             Sleep(0); ND.ConfigEdit("vsync=0");
 
         }
-
+        static int64_t dx = 0;
+        static int64_t dy = 0;
         ImGui::Begin("Notepad", &ND.fCNotepadWindow,ND.fW_noTitle | ND.fW_noMove);
-        ImGui::SetWindowSize(ImVec2(780, 600));
+        ND.dsx(&dx, &dy, hwnd);
+        ImGui::SetWindowSize(ImVec2(dx, dy));
         ImGui::SetWindowPos(ImVec2(1, 1));
-        ImGui::PushFont(font3);
-        ImGui::Text((ND.FileNameOffset + "\tsz:"+std::to_string(ND.fCSTR_Buffer.size() / 1024)+" KiB Lines:"+std::to_string(ND.cLine)).c_str());
-        ImGui::PopFont();
         if(ND.fNavButtons){
-            ImGui::Begin("Tools", &ND.fNavButtons, ND.fW_noTitle | ND.fW_noMove | ND.fW_noColiapse | ND.fW_noResize);
-        ImGui::SetWindowSize(ImVec2(780, 650));
-        ImGui::SetWindowPos(ImVec2(1, 1));
-        ImGui::SetCursorPos(ImVec2(300, 60));
+            ImGui::SetCursorPos(ImVec2((dx - 256) / 2, (dy - 256) / 2));
         CImageC.CreateImage(128,128);
         ImGui::PushFont(font1);
-        ImGui::SetCursorPos(ImVec2(200,200));
-        ImGui::Text("CNotepad 0.1(x64)");
+        ImGui::SetCursorPosX((dx - 256) / 2);
+        ImGui::Text("CNotepad-- 0.2(x64)");
         ImGui::PopFont();
-        ImGui::SetCursorPosX(200);
-        ImGui::Text("Всратый блокнот который работает на OpenGL3.3))\nНаписан на С++20");
-        ImGui::SetCursorPosX(200);
-        if (ImGui::Button("Создать файл")) {
+        ImGui::SetCursorPosX((dx - 256) / 2);
+        ImGui::Text("Всратый блокнот который умеет компилить проекты. \n работает на OpenGL3.3))\nНаписан на С++20");
+        ImGui::SetCursorPosX((dx - 256) / 2);
+        if (ImGui::Button("Создать файл", ImVec2(140, 40))) {
             fwop++;
             if (fwop > 1) {
                 fwop = 0;
@@ -239,14 +235,9 @@ int main(int, char** argv)
             }
             // ND.Message_log("Мастер создание файла!", "CNotepad");
         } ImGui::SameLine();
-        ImGui::SetCursorPosX(330);
-        if (ImGui::Button("Конфиг")) {
+        if (ImGui::Button("Конфиг", ImVec2(140, 40))) {
             ND.MakeConfig = true;
         }
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(400);
-        ImGui::Button("О программе");
-        ImGui::End();
         }
         if (ND.fNBufferLine) {
             ND.ConfigEdit("nLine=1");
@@ -254,8 +245,12 @@ int main(int, char** argv)
         else {
             ND.ConfigEdit("nLine=0");
         }
+        
         if (ND.MakeConfig) {
+
+            ND.SwapBuffer(&fC_commandStr);
             ImGui::Begin("КОНФИГ", &ND.MakeConfig, ND.fW_noMove | ND.fW_noColiapse | ND.fW_noResize);
+            ImGui::SetWindowPos(ImVec2((dx - ImGui::GetWindowWidth()) / 2, (dy - ImGui::GetWindowHeight()) / 2));
             ImGui::SetCursorPosX(30);
             ImGui::PushFont(font1);
             ImGui::Text("CNotepad::Настроики");
@@ -265,15 +260,22 @@ int main(int, char** argv)
             ImGui::SetCursorPosX(30);
             ImGui::MenuItem("Включить Синхронизацию кадров", NULL, &ND.fBvsync, 1);
             ImGui::SetCursorPosX(30);
-            ImGui::Text(("Экран:" + std::to_string(dx) + ":" + std::to_string(dy)).c_str());
+            ImGui::PushFont(font1);
+            ImGui::Text("Запуск и компиляция");
+            ImGui::PopFont();
             ImGui::SetCursorPosX(30);
+            ImGui::InputText("Команда.", &fC_commandStr);
+            ImGui::SetCursorPosX(30);
+            ImGui::Checkbox("Выполнение кода в Runtime", &cbRuntimeBatch);
             if (ImGui::Button("ОК")) {
                 ND.MakeConfig = false;
+                ND.fNavButtons = true;
             }
             ImGui::End();
         }
         if (ND.FileOpen) {
             ImGui::Begin("СОЗДАНИЕ ФАЙЛА", &ND.FileOpen, ND.fW_noMove | ND.fW_noColiapse | ND.fW_noResize);
+            ImGui::SetWindowPos(ImVec2((dx - ImGui::GetWindowWidth()) / 2, (dy - ImGui::GetWindowHeight()) / 2));
             ImGui::SetCursorPosX(30);
             ImGui::Text("Введите Название файла");
             ImGui::SetCursorPosX(30);
@@ -301,23 +303,56 @@ int main(int, char** argv)
                 ND.NavWindowClose();
 
             }
+            
             ImGui::SetCursorPosX(30);
             if (ND.FileNameOffset.size() < 1) {
                 ImGui::Text("Ошибка введите имя или выберите файл!!");
             }
             ImGui::End();
         }
-        if (ND.FileCreateState) {
-            ImGui::PushFont(font3);
-            ImGui::InputTextMultiline(".", &ND.fCSTR_Buffer, ImVec2(740, 440));
-            ImGui::PopFont();
-        }
-        if (ImGui::Button("Сохранить", ImVec2(140, 40))) {
-            ND.SaveFile(ND.FileNameOffset, ND.fCSTR_Buffer);
-        } ImGui::SameLine();
-        if (ImGui::Button("Выйти", ImVec2(140, 40))) {
-            ND.fNavButtons = true;
-        } ImGui::SameLine();
+       
+            if (ND.FileCreateState) {
+                ::ShowWindow(hwnd, 3);
+                ImGui::SameLine();
+                if (ImGui::Button("Открыть файл", ImVec2(140, 40))) {
+                    ND.FileOpen = true;
+
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Конфиг", ImVec2(140, 40))) {
+                    ND.MakeConfig = true;
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Сохранить", ImVec2(140, 40))) {
+                    ND.SaveFile(ND.FileNameOffset, ND.fCSTR_Buffer);
+                } ImGui::SameLine();
+                if (ImGui::Button("Выйти", ImVec2(140, 40))) {
+                    ND.FileCreateState = false;
+                    ND.fNavButtons = true;
+                } ImGui::SameLine();
+                if (ImGui::Button("Сборка", ImVec2(140, 40))) {
+                    if (!cbRuntimeBatch) {
+                        ND.StartCompile(fC_commandStr);
+                    }
+                    if (cbRuntimeBatch) {
+                        ND.BatchRT(ND.fCSTR_Buffer);
+                    }
+                }
+                ImGui::SameLine();
+                ImGui::PushFont(font3);
+                ImGui::Text((ND.FileNameOffset + "\tsz:" + std::to_string(ND.fCSTR_Buffer.size() / 1024) + " KiB Lines:" + std::to_string(ND.cLine)).c_str());
+                ImGui::PopFont();
+                ImGui::PushFont(font3);
+                ND.CSetTextColor(ImVec4(0.20f, 1.0f, 0.40f, 1.0f));
+                ImGui::InputTextMultiline(".", &ND.fCSTR_Buffer, ImVec2(io.DisplaySize.x - 100, io.DisplaySize.y - 100), ImGuiInputTextFlags_CharsNoBlank);
+                ND.CSetColorAssept();
+                ImGui::PopFont();
+                ImGui::SetCursorPosX(10);
+                ND.CSetTextColor(ImVec4(0.03f, 0.53f, 1.0f, 1.0f));
+                ImGui::Text("CNotepad build 0.2_x64_OpenGL3.3 (pre-alpha)");
+                ND.CSetColorAssept();
+            }
+        
         ImGui::End();
         //ImGui::End();
 
