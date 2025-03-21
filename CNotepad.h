@@ -1,4 +1,4 @@
-
+﻿
 
 #define CRT_NO_WARNINGS 1
 #include "imgui.h"
@@ -128,7 +128,7 @@ class CNotepad {
         bool MakeConfig = false;
         bool About = false;
         bool fNavButtons = true;
-        bool MessageWindowInit = true;
+        bool MessageWindowInit = false;
         //
         bool NButton(const char* text, bool* state);
         int64_t NInput(std::string text, std::string* out);
@@ -145,6 +145,7 @@ class CNotepad {
         bool OpenFileA(std::string* outdata);
         int64_t fp_lineCount = 0;
         int64_t cLine = 0;
+        std::string msg;
         bool fNBufferLine = true;
         bool fBvsync = true;
         bool ConfigEdit(std::string sCfgItem);
@@ -156,7 +157,16 @@ class CNotepad {
         std::string commandCompiler;
         bool BatchRT(std::string TextBuffer);
         uint64_t dsx(int64_t* x, int64_t* y, HWND hwnd);
+        uint64_t fTx_multiLineFlags = 1 << 26;
+        uint64_t bufferSize = 0;
+        bool WindowFullScreen = false;
+        uint64_t Clog(std::string text);
+           
 };
+uint64_t CNotepad::Clog(std::string text) {
+    CNotepad::msg = text;
+    return 0;
+}
 bool CNotepad::NButton(const char* text, bool* state) {
     if (ImGui::Button(text)) {
         *state = true;
@@ -184,6 +194,7 @@ bool CNotepad::SaveFile(std::string fileName, std::string text) {
     }
     fileHandle << text << std::endl;
     fileHandle.close();
+    CNotepad::Clog("Файл:" + CNotepad::FileNameOffset + ": сохранен успешно!");
 }
 bool CNotepad::NavWindowClose() {
     CNotepad::fNavButtons = false;
@@ -196,16 +207,18 @@ bool CNotepad::FileOpenClose() {
 bool CNotepad::OpenFileN(std::string* outdata) {
     *outdata = "";
     openFileDialog(FileNameOffset);
-    std::ifstream fileRead((CNotepad::FileNameOffset).c_str());
-    fileRead.is_open();
-    while (std::getline(fileRead, fCsrText)) {
+    std::ifstream fileRead2((CNotepad::FileNameOffset).c_str());
+    fileRead2.is_open();
+    CNotepad::Clog("Файл:" + CNotepad::FileNameOffset + ": открыт");
+    while (std::getline(fileRead2, fCsrText)) {
+        CNotepad::bufferSize = CNotepad::fCsrText.size();
         std::cout << CNotepad::fp_lineCount << std::endl;
         CNotepad::fp_lineCount++;
         if (CNotepad::fp_lineCount > 5) {
             CNotepad::fp_lineCount = 0;
         }
         if (CNotepad::fNBufferLine) {
-            if (fp_lineCount == 5) {
+            if (CNotepad::bufferSize += 37) {
                 CNotepad::cLine++;
                 std::cout << CNotepad::cLine << std::endl;
                 CNotepad::fCsrText = CNotepad::fCsrText + "\n";
@@ -213,8 +226,8 @@ bool CNotepad::OpenFileN(std::string* outdata) {
         }
         *outdata += CNotepad::fCsrText;
     }
-    fileRead.close();
-    return fileRead.is_open();
+    fileRead2.close();
+    return fileRead2.is_open();
 }
 uint64_t CNotepad::dsx(int64_t* x, int64_t* y,HWND hwnd) {
 
@@ -240,15 +253,26 @@ bool CNotepad::StartCompile(std::string command) {
 bool CNotepad::OpenFileA(std::string* outdata) {
     *outdata = "";
     std::ifstream fileRead2((CNotepad::FileNameOffset).c_str());
-    fileRead2.is_open();
+    CNotepad::Clog("Файл:" + CNotepad::FileNameOffset + ": открыт");
+    if (!fileRead2.is_open()) {
+        CNotepad::MessageWindowInit = !fileRead2.is_open();
+        if (CNotepad::MessageWindowInit) {
+            CNotepad::Clog("Fatal Error!! Файл не открыт!!");
+        }
+    }
     while (std::getline(fileRead2, fCsrText)) {
+        CNotepad::bufferSize = CNotepad::fCsrText.size();
         std::cout << CNotepad::fp_lineCount << std::endl;
         CNotepad::fp_lineCount++;
         if (CNotepad::fp_lineCount > 5) {
             CNotepad::fp_lineCount = 0;
         }
         if (CNotepad::fNBufferLine) {
-            
+            if (CNotepad::bufferSize += 37) {
+                CNotepad::cLine++;
+                std::cout << CNotepad::cLine << std::endl;
+                CNotepad::fCsrText = CNotepad::fCsrText + "\n";
+            }
         }
         *outdata += CNotepad::fCsrText;
     }
@@ -261,6 +285,7 @@ bool CNotepad::ConfigEdit(std::string sCfgItem) {
 
     }
     cncfg << sCfgItem << std::endl;
+    return true;
 }
 bool CNotepad::ConfigParse(std::string sCfgItem, bool *b_enable,bool b_st) {
     std::string m_str;
@@ -282,15 +307,18 @@ int64_t CNotepad::NInput(std::string text, std::string* out) {
    // ImGui::InputText(".",*out);
 }
 int64_t CNotepad::Message_log(std::string text, std::string title) {
-    ImGui::Begin((title).c_str(), &MessageWindowInit);
-    ImGui::Text((text).c_str());   
-    if (ImGui::Button("OK")) {
-       MessageWindowInit = false;
+    if (MessageWindowInit) {
+        ImGui::Begin((title).c_str(), &MessageWindowInit);
+        ImGui::Text((text).c_str());
+        if (ImGui::Button("OK")) {
+            MessageWindowInit = false;
+        }
+        ImGui::End();
     }
-    ImGui::End();
 }
 bool CNotepad::Init() {
-
+    ShowWindow(GetConsoleWindow(), 0);
+    return 1;
 }
 CNotepad ND;
 
